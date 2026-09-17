@@ -99,3 +99,7 @@ Account identifiers are redacted in all public data (`REDACTED`).
 ## License
 
 MIT
+
+## Consolidated
+
+This repo has been merged into [toxicwind/nvidia-nim](https://github.com/toxicwind/nvidia-nim) (2026-09-17) with full history preserved. New NIM work goes there.
