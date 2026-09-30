@@ -9,9 +9,13 @@
 
 # nvidia-nim-model-probe
 
+### We swept all 82 models in NVIDIA's NIM catalog with a fail-fast probe ladder. Only 10 answered. The catalog is an unreliable narrator.
+
 > **Consolidated.** This repo was merged into [toxicwind/nvidia-nim](https://github.com/toxicwind/nvidia-nim) on 2026-09-17 with full history preserved. New NIM work goes there — this repo is the frozen evidence locker for the September 2026 probe.
 
-**We swept all 82 models in NVIDIA's NIM catalog with a fail-fast probe ladder. Only 10 answered. The catalog is an unreliable narrator: it lists embeddings that can never answer chat completions, 21 legacy models that are all gated, and it *mutates between calls* — deepseek-v4-pro was delisted mid-investigation. Availability itself is a per-minute lottery: models flap between alive, 503, and timeout across runs.**
+**The catalog lists embeddings that can never answer chat completions, 21 legacy models that are all gated, and it *mutates between calls* — deepseek-v4-pro was delisted mid-investigation. Availability itself is a per-minute lottery: models flap between alive, 503, and timeout across runs.**
+
+---
 
 ## TL;DR
 
@@ -32,7 +36,7 @@ flowchart TB
     C["GET /v1/models — live catalog order, no cherry-picking"]
     C --> P1["probe 1: 5 s non-streaming ping"]
     P1 -->|answers| A["alive"]
-    P1 -->|slow| P2["probe 2: streaming probe"]
+    P1 -->|slow| P2["streaming probe"]
     P2 -->|answers| A
     P2 -->|stall / timeout| S["flaky verdict"]
     P1 -->|404| G["gated-404 (fast, stable ~300–600 ms)"]
@@ -49,7 +53,19 @@ flowchart TB
 - **Rate-limit audit**: 429s are recorded, never slept through.
 - Independent cross-validation: [aviclaw01/nvclaude](https://github.com/aviclaw01/nvclaude) found the same 404-for-account shape; [sherman-yang/nvidia-model-info](https://github.com/sherman-yang/nvidia-model-info) built a richer paced taxonomy. Forum root-cause threads: [1](https://forums.developer.nvidia.com/t/public-api-endpoints-scope-missing-on-personal-org-llama-gemma-work-kimi-deepseek-qwen-nemotron-all-404/378043) [2](https://forums.developer.nvidia.com/t/newer-nim-models-kimi-k2-6-deepseek-ai-deepseek-v4-pro-hang-indefinitely-or-404-possible-missing-public-api-endpoints-permission/377777) [3](https://forums.developer.nvidia.com/t/function-not-found-for-account-moonshotai-kimi-k2-6-and-deepseek-ai-deepseek-v4-pro-0813-404/382736)
 
-## WTF the 82 models are
+---
+
+## Quick start (reproduce the sweep)
+
+```bash
+export NVIDIA_API_KEY            # your key, from env — never committed
+python3 probe.py --all           # fail-fast ladder over the live catalog
+python3 fuzz_endpoints.py        # 25-probe API surface matrix
+```
+
+---
+
+## What the 82 models are
 
 The community treats `/v1/models` as a menu of chat models. It's a registry dump. Crossed with probe verdicts (`alive` = answered our 3-token ping in <5 s):
 
@@ -97,13 +113,7 @@ Between the 82-model sweep and the per-model GET oracle (~10 min later): **82 �
 - Chat shape matrix: SSE+stream_options, response_format, tools, logprobs accepted; `n=2`+temp 0 → 400; empty model → 400. `nemotron-parse` (v1) 400s on plain strings — needs structured input.
 - Full endpoint matrix: `data/fuzz_endpoints_2026-09-14.json`.
 
-## Quick start (reproduce the sweep)
-
-```bash
-export NVIDIA_API_KEY            # your key, from env — never committed
-python3 probe.py --all           # fail-fast ladder over the live catalog
-python3 fuzz_endpoints.py        # 25-probe API surface matrix
-```
+---
 
 ## Repo contents
 
@@ -127,6 +137,10 @@ Account identifiers are redacted in all public data (`REDACTED`).
 - "Usable" = answered a 3-token ping. Content quality, tool-call reliability, and long-context behavior need `bench.py` runs (in progress).
 - Fast 404s are stable; alive/timeout/503 verdicts are snapshots, not properties. Re-run before trusting.
 
-## License
+---
 
-MIT
+## License & security
+
+**MIT** — the license file in this repo.
+
+`NVIDIA_API_KEY` comes from the environment — never committed. Account identifiers are `REDACTED` in all public data. Probes are read-only inference pings; no destructive requests.
